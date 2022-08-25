@@ -19,7 +19,9 @@ def main():
         #cumulativeProfit为历史累计收益(包括中途卖出所得/所失，和分红所得)，stockValueOnHand仅为当前持仓市值
         totalCost = 0.0 
         yieldAsForNow = 0.0
-        totalUnits = 0
+
+        totalUnits = 0.0
+
         print(">>>>>>>>>>>>>>>>>>>")
         print("交易记录")
         for record in stockTradingRecords[stockCode]:
@@ -35,19 +37,27 @@ def main():
                     totalCost += (float(record['shares']) * averageUnitCost)
                     #卖出获利:(卖出单价 - 之前买入平均价) *份额
                     yieldAsForNow += (float(record['unit price']) - averageUnitCost)*float(record['shares'])
-                    totalUnits -= int(record['shares']) 
+
+                    totalUnits -= float(record['shares']) 
+
             #分红
             else: 
                 yieldAsForNow += float(record['Total amount'])
                 totalCost += float(record['Total amount'])
 
         totalYield += yieldAsForNow
-        if totalUnits != 0:
-            print("成本价: "+str(getRoundTwoDecimal(-totalCost/totalUnits)))
 
-        print("持有数量: "+str(totalUnits))  
+
+        #设置大于一是过滤掉计算过程当中产生的误差，这个值很小
+        if totalUnits >= 1: 
+            print("成本价: "+str(getRoundTwoDecimal(-totalCost/totalUnits)))
+            print("持有数量: "+str(totalUnits))  
+            print("持仓成本: "+str(-totalCost)) 
+
+        
         print("历史收益: "+str(getRoundTwoDecimal(yieldAsForNow)))
-        print("持仓成本: "+str(-totalCost)) 
+        
+
       
         #如持有当前股票，获取并打印股票当前最新信息
         if totalUnits != 0 and isValidStockCode(stockCode): 
@@ -73,7 +83,8 @@ def main():
     print("历史总收益: "+str(totalYield))
     print("持仓总市值: "+str(holdingStockValue))
     print("持仓总成本: "+str(holdingStockCost))
-    print("持仓盈亏比: "+str(getRoundTwoDecimal(((holdingStockCost + holdingStockValue)/-holdingStockCost)*100))+"%")
+
+    print("持仓盈亏:   "+str(holdingStockCost + holdingStockValue))
 
 
 def getRoundTwoDecimal(number):
@@ -140,5 +151,6 @@ def getLastValidDate():
 
 
 
-
 main()
+
+

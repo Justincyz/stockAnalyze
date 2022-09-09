@@ -14,14 +14,13 @@ def main():
     holdingStockValue = 0.0 #当前持仓总市值
     holdingStockCost = 0.0
     totalYield = 0.0
+    stockHoldingPercentage = dict()
     for stockCode, value in stockTradingRecords.items():
         print(value[0]['name'])
         #cumulativeProfit为历史累计收益(包括中途卖出所得/所失，和分红所得)，stockValueOnHand仅为当前持仓市值
         totalCost = 0.0 
         yieldAsForNow = 0.0
-
         totalUnits = 0.0
-
         print(">>>>>>>>>>>>>>>>>>>")
         print("交易记录")
         for record in stockTradingRecords[stockCode]:
@@ -37,16 +36,13 @@ def main():
                     totalCost += (float(record['shares']) * averageUnitCost)
                     #卖出获利:(卖出单价 - 之前买入平均价) *份额
                     yieldAsForNow += (float(record['unit price']) - averageUnitCost)*float(record['shares'])
-
                     totalUnits -= float(record['shares']) 
-
             #分红
             else: 
                 yieldAsForNow += float(record['Total amount'])
-                totalCost += float(record['Total amount'])
+                totalCost += float(record['Total amount']) #分红数据为正值，将其从cost当中减去
 
         totalYield += yieldAsForNow
-
 
         #设置大于一是过滤掉计算过程当中产生的误差，这个值很小
         if totalUnits >= 1: 
@@ -57,15 +53,12 @@ def main():
         
         print("历史收益: "+str(getRoundTwoDecimal(yieldAsForNow)))
         
-
       
         #如持有当前股票，获取并打印股票当前最新信息
         if totalUnits != 0 and isValidStockCode(stockCode): 
             #如果是周末，则获取礼拜五作为有效时间
             lastValidDate = datetime.datetime.now().strftime('%Y%m%d') if isWeekday() else getLastValidDate()
-          
             current_stock_hist = getStockInfo(stockCode, lastValidDate, lastValidDate)
-
             #按今日收盘价计算持仓市值
             marketValue = current_stock_hist.loc[0,'收盘':'收盘'].values[0] * totalUnits
             print("持仓市值: "+str(getRoundTwoDecimal(marketValue)))
@@ -74,7 +67,9 @@ def main():
             print("-------")
             print(current_stock_hist.loc[0,'日期':'最低'].to_string())
             holdingStockValue += marketValue
+            #只记录持仓市值
             holdingStockCost += totalCost
+            stockHoldingPercentage[value[0]['name']] = totalCost
         print("<<<<<<<<<<<<<<<<<<<")
           
         print()
@@ -83,8 +78,13 @@ def main():
     print("历史总收益: "+str(totalYield))
     print("持仓总市值: "+str(holdingStockValue))
     print("持仓总成本: "+str(holdingStockCost))
-
     print("持仓盈亏:   "+str(holdingStockCost + holdingStockValue))
+    print("持仓盈亏比: "+str(getRoundTwoDecimal(((holdingStockCost + holdingStockValue)/-holdingStockCost)*100))+"%")
+    print("------------------------")
+
+    stockHoldingPercentageList = sorted(stockHoldingPercentage.items(), key=lambda x: x[1])
+    for item in stockHoldingPercentageList:
+        print(item[0]+" : "+str(getRoundTwoDecimal(item[1]*100/holdingStockCost))+"%")
 
 
 def getRoundTwoDecimal(number):
@@ -143,14 +143,16 @@ def isWeekday():
 
 def getLastValidDate():
     today = datetime.date.today()
+    day = datetime.datetime.today().weekday()
     if isWeekday():
         return today
     else:
-        return today - datetime.timedelta(days = (1 if today == 5 else 2))
+        return (today - datetime.timedelta(days = (1 if day == 5 else 2))).strftime('%Y%m%d')
 
 
 
 
 main()
+
 
 
